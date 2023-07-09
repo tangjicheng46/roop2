@@ -223,3 +223,30 @@ def run() -> None:
             return
     limit_resources()
     start()
+
+
+def run_with_param(face_image_path: str, input_video_path: str, output_video_path: str) -> None:
+    roop.globals.source_path = face_image_path
+    roop.globals.target_path = input_video_path
+    roop.globals.output_path = output_video_path
+    roop.globals.frame_processors = ['face_swapper']
+    roop.globals.keep_fps = True
+    roop.globals.keep_audio = True
+    roop.globals.execution_providers = decode_execution_providers(['cuda'])
+
+    # default param
+    roop.globals.keep_frames = False
+    roop.globals.many_faces = False
+    roop.globals.video_encoder = 'libx264'
+    roop.globals.video_quality = 18
+    roop.globals.max_memory = 16
+    roop.globals.execution_threads = 8
+
+    if not pre_check():
+        print("pre_check failed")
+        return
+    for frame_processor in get_frame_processors_modules(roop.globals.frame_processors):
+        if not frame_processor.pre_check():
+            return
+    limit_resources()
+    start()

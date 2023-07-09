@@ -20,11 +20,20 @@ if platform.system().lower() == 'darwin':
     ssl._create_default_https_context = ssl._create_unverified_context
 
 
+def add_path_to_environment(path):
+    current_path = os.environ.get("PATH", "")
+    if path not in current_path:
+        os.environ["PATH"] = path + os.pathsep + current_path
+
+
 def run_ffmpeg(args: List[str]) -> bool:
-    commands = ['ffmpeg', '-hide_banner', '-hwaccel', 'auto', '-loglevel', roop.globals.log_level]
+    add_path_to_environment("/home/ec2-user/ffmpeg/bin")
+    commands = ['ffmpeg', '-hide_banner', '-hwaccel',
+                'auto', '-loglevel', roop.globals.log_level]
     commands.extend(args)
     try:
-        subprocess.check_output(commands, stderr=subprocess.STDOUT)
+        subprocess.check_output(
+            commands, stderr=subprocess.STDOUT, env=os.environ)
         return True
     except Exception:
         pass
@@ -32,7 +41,8 @@ def run_ffmpeg(args: List[str]) -> bool:
 
 
 def detect_fps(target_path: str) -> float:
-    command = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'default=noprint_wrappers=1:nokey=1', target_path]
+    command = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries',
+               'stream=r_frame_rate', '-of', 'default=noprint_wrappers=1:nokey=1', target_path]
     output = subprocess.check_output(command).decode().strip().split('/')
     try:
         numerator, denominator = map(int, output)
@@ -44,18 +54,21 @@ def detect_fps(target_path: str) -> float:
 
 def extract_frames(target_path: str) -> None:
     temp_directory_path = get_temp_directory_path(target_path)
-    run_ffmpeg(['-i', target_path, '-pix_fmt', 'rgb24', os.path.join(temp_directory_path, '%04d.png')])
+    run_ffmpeg(['-i', target_path, '-pix_fmt', 'rgb24',
+               os.path.join(temp_directory_path, '%04d.png')])
 
 
 def create_video(target_path: str, fps: float = 30.0) -> None:
     temp_output_path = get_temp_output_path(target_path)
     temp_directory_path = get_temp_directory_path(target_path)
-    run_ffmpeg(['-r', str(fps), '-i', os.path.join(temp_directory_path, '%04d.png'), '-c:v', roop.globals.video_encoder, '-crf', str(roop.globals.video_quality), '-pix_fmt', 'yuv420p', '-vf', 'colorspace=bt709:iall=bt601-6-625:fast=1', '-y', temp_output_path])
+    run_ffmpeg(['-r', str(fps), '-i', os.path.join(temp_directory_path, '%04d.png'), '-c:v', roop.globals.video_encoder, '-crf',
+               str(roop.globals.video_quality), '-pix_fmt', 'yuv420p', '-vf', 'colorspace=bt709:iall=bt601-6-625:fast=1', '-y', temp_output_path])
 
 
 def restore_audio(target_path: str, output_path: str) -> None:
     temp_output_path = get_temp_output_path(target_path)
-    done = run_ffmpeg(['-i', temp_output_path, '-i', target_path, '-c:v', 'copy', '-map', '0:v:0', '-map', '1:a:0', '-y', output_path])
+    done = run_ffmpeg(['-i', temp_output_path, '-i', target_path, '-c:v',
+                      'copy', '-map', '0:v:0', '-map', '1:a:0', '-y', output_path])
     if not done:
         move_temp(target_path, output_path)
 
@@ -79,7 +92,8 @@ def get_temp_output_path(target_path: str) -> str:
 def normalize_output_path(source_path: str, target_path: str, output_path: str) -> Any:
     if source_path and target_path:
         source_name, _ = os.path.splitext(os.path.basename(source_path))
-        target_name, target_extension = os.path.splitext(os.path.basename(target_path))
+        target_name, target_extension = os.path.splitext(
+            os.path.basename(target_path))
         if os.path.isdir(output_path):
             return os.path.join(output_path, source_name + '-' + target_name + target_extension)
     return output_path
@@ -129,12 +143,14 @@ def conditional_download(download_directory_path: str, urls: List[str]) -> None:
     if not os.path.exists(download_directory_path):
         os.makedirs(download_directory_path)
     for url in urls:
-        download_file_path = os.path.join(download_directory_path, os.path.basename(url))
+        download_file_path = os.path.join(
+            download_directory_path, os.path.basename(url))
         if not os.path.exists(download_file_path):
-            request = urllib.request.urlopen(url) # type: ignore[attr-defined]
+            request = urllib.request.urlopen(url)  # type: ignore[attr-defined]
             total = int(request.headers.get('Content-Length', 0))
             with tqdm(total=total, desc='Downloading', unit='B', unit_scale=True, unit_divisor=1024) as progress:
-                urllib.request.urlretrieve(url, download_file_path, reporthook=lambda count, block_size, total_size: progress.update(block_size)) # type: ignore[attr-defined]
+                urllib.request.urlretrieve(url, download_file_path, reporthook=lambda count,
+                                           block_size, total_size: progress.update(block_size))  # type: ignore[attr-defined]
 
 
 def resolve_relative_path(path: str) -> str:
