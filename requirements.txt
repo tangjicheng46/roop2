@@ -1,0 +1,14 @@
+numpy
+opencv-python
+onnx
+insightface
+psutil
+pillow
+torch
+torchvision
+onnxruntime
+onnxruntime-gpu
+tensorflow
+protobuf
+tqdm
+gfpgan

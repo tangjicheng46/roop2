@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
 
+from roop.utilities import has_image_extension, is_image, is_video, detect_fps, create_video, extract_frames, get_temp_frame_paths, restore_audio, create_temp, move_temp, clean_temp, normalize_output_path
+from roop.processors.frame.core import get_frame_processors_modules
+import roop.ui as ui
+import roop.metadata
+import roop.globals
+import tensorflow
+import onnxruntime
+import torch
+import argparse
+import shutil
+import signal
+import platform
+from typing import List
+import warnings
 import os
 import sys
 # single thread doubles cuda performance - needs to be set before torch import
@@ -7,22 +21,7 @@ if any(arg.startswith('--execution-provider') for arg in sys.argv):
     os.environ['OMP_NUM_THREADS'] = '1'
 # reduce tensorflow log level
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-import warnings
-from typing import List
-import platform
-import signal
-import shutil
-import argparse
-import torch
-import onnxruntime
-import tensorflow
 
-import roop.globals
-import roop.metadata
-import roop.ui as ui
-from roop.predicter import predict_image, predict_video
-from roop.processors.frame.core import get_frame_processors_modules
-from roop.utilities import has_image_extension, is_image, is_video, detect_fps, create_video, extract_frames, get_temp_frame_paths, restore_audio, create_temp, move_temp, clean_temp, normalize_output_path
 
 if 'ROCMExecutionProvider' in roop.globals.execution_providers:
     del torch
@@ -33,27 +32,43 @@ warnings.filterwarnings('ignore', category=UserWarning, module='torchvision')
 
 def parse_args() -> None:
     signal.signal(signal.SIGINT, lambda signal_number, frame: destroy())
-    program = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=100))
-    program.add_argument('-s', '--source', help='select an source image', dest='source_path')
-    program.add_argument('-t', '--target', help='select an target image or video', dest='target_path')
-    program.add_argument('-o', '--output', help='select output file or directory', dest='output_path')
-    program.add_argument('--frame-processor', help='frame processors (choices: face_swapper, face_enhancer, ...)', dest='frame_processor', default=['face_swapper'], nargs='+')
-    program.add_argument('--keep-fps', help='keep original fps', dest='keep_fps', action='store_true', default=False)
-    program.add_argument('--keep-audio', help='keep original audio', dest='keep_audio', action='store_true', default=True)
-    program.add_argument('--keep-frames', help='keep temporary frames', dest='keep_frames', action='store_true', default=False)
-    program.add_argument('--many-faces', help='process every face', dest='many_faces', action='store_true', default=False)
-    program.add_argument('--video-encoder', help='adjust output video encoder', dest='video_encoder', default='libx264', choices=['libx264', 'libx265', 'libvpx-vp9'])
-    program.add_argument('--video-quality', help='adjust output video quality', dest='video_quality', type=int, default=18, choices=range(52), metavar='[0-51]')
-    program.add_argument('--max-memory', help='maximum amount of RAM in GB', dest='max_memory', type=int, default=suggest_max_memory())
-    program.add_argument('--execution-provider', help='available execution provider (choices: cpu, ...)', dest='execution_provider', default=['cpu'], choices=suggest_execution_providers(), nargs='+')
-    program.add_argument('--execution-threads', help='number of execution threads', dest='execution_threads', type=int, default=suggest_execution_threads())
-    program.add_argument('-v', '--version', action='version', version=f'{roop.metadata.name} {roop.metadata.version}')
+    program = argparse.ArgumentParser(
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=100))
+    program.add_argument(
+        '-s', '--source', help='select an source image', dest='source_path')
+    program.add_argument(
+        '-t', '--target', help='select an target image or video', dest='target_path')
+    program.add_argument(
+        '-o', '--output', help='select output file or directory', dest='output_path')
+    program.add_argument('--frame-processor', help='frame processors (choices: face_swapper, face_enhancer, ...)',
+                         dest='frame_processor', default=['face_swapper'], nargs='+')
+    program.add_argument('--keep-fps', help='keep original fps',
+                         dest='keep_fps', action='store_true', default=False)
+    program.add_argument('--keep-audio', help='keep original audio',
+                         dest='keep_audio', action='store_true', default=True)
+    program.add_argument('--keep-frames', help='keep temporary frames',
+                         dest='keep_frames', action='store_true', default=False)
+    program.add_argument('--many-faces', help='process every face',
+                         dest='many_faces', action='store_true', default=False)
+    program.add_argument('--video-encoder', help='adjust output video encoder',
+                         dest='video_encoder', default='libx264', choices=['libx264', 'libx265', 'libvpx-vp9'])
+    program.add_argument('--video-quality', help='adjust output video quality',
+                         dest='video_quality', type=int, default=18, choices=range(52), metavar='[0-51]')
+    program.add_argument('--max-memory', help='maximum amount of RAM in GB',
+                         dest='max_memory', type=int, default=suggest_max_memory())
+    program.add_argument('--execution-provider', help='available execution provider (choices: cpu, ...)',
+                         dest='execution_provider', default=['cpu'], choices=suggest_execution_providers(), nargs='+')
+    program.add_argument('--execution-threads', help='number of execution threads',
+                         dest='execution_threads', type=int, default=suggest_execution_threads())
+    program.add_argument('-v', '--version', action='version',
+                         version=f'{roop.metadata.name} {roop.metadata.version}')
 
     args = program.parse_args()
 
     roop.globals.source_path = args.source_path
     roop.globals.target_path = args.target_path
-    roop.globals.output_path = normalize_output_path(roop.globals.source_path, roop.globals.target_path, args.output_path)
+    roop.globals.output_path = normalize_output_path(
+        roop.globals.source_path, roop.globals.target_path, args.output_path)
     roop.globals.frame_processors = args.frame_processor
     roop.globals.headless = args.source_path or args.target_path or args.output_path
     roop.globals.keep_fps = args.keep_fps
@@ -63,7 +78,8 @@ def parse_args() -> None:
     roop.globals.video_encoder = args.video_encoder
     roop.globals.video_quality = args.video_quality
     roop.globals.max_memory = args.max_memory
-    roop.globals.execution_providers = decode_execution_providers(args.execution_provider)
+    roop.globals.execution_providers = decode_execution_providers(
+        args.execution_provider)
     roop.globals.execution_threads = args.execution_threads
 
 
@@ -99,7 +115,8 @@ def limit_resources() -> None:
     gpus = tensorflow.config.experimental.list_physical_devices('GPU')
     for gpu in gpus:
         tensorflow.config.experimental.set_virtual_device_configuration(gpu, [
-            tensorflow.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)
+            tensorflow.config.experimental.VirtualDeviceConfiguration(
+                memory_limit=1024)
         ])
     # limit memory usage
     if roop.globals.max_memory:
@@ -109,7 +126,8 @@ def limit_resources() -> None:
         if platform.system().lower() == 'windows':
             import ctypes
             kernel32 = ctypes.windll.kernel32
-            kernel32.SetProcessWorkingSetSize(-1, ctypes.c_size_t(memory), ctypes.c_size_t(memory))
+            kernel32.SetProcessWorkingSetSize(
+                -1, ctypes.c_size_t(memory), ctypes.c_size_t(memory))
         else:
             import resource
             resource.setrlimit(resource.RLIMIT_DATA, (memory, memory))
@@ -122,7 +140,8 @@ def release_resources() -> None:
 
 def pre_check() -> bool:
     if sys.version_info < (3, 9):
-        update_status('Python version is not supported - please upgrade to 3.9 or higher.')
+        update_status(
+            'Python version is not supported - please upgrade to 3.9 or higher.')
         return False
     if not shutil.which('ffmpeg'):
         update_status('ffmpeg is not installed.')
@@ -142,12 +161,11 @@ def start() -> None:
             return
     # process image to image
     if has_image_extension(roop.globals.target_path):
-        if predict_image(roop.globals.target_path):
-            destroy()
         shutil.copy2(roop.globals.target_path, roop.globals.output_path)
         for frame_processor in get_frame_processors_modules(roop.globals.frame_processors):
             update_status('Progressing...', frame_processor.NAME)
-            frame_processor.process_image(roop.globals.source_path, roop.globals.output_path, roop.globals.output_path)
+            frame_processor.process_image(
+                roop.globals.source_path, roop.globals.output_path, roop.globals.output_path)
             frame_processor.post_process()
             release_resources()
         if is_image(roop.globals.target_path):
@@ -156,8 +174,6 @@ def start() -> None:
             update_status('Processing to image failed!')
         return
     # process image to videos
-    if predict_video(roop.globals.target_path):
-        destroy()
     update_status('Creating temp resources...')
     create_temp(roop.globals.target_path)
     update_status('Extracting frames...')
@@ -165,7 +181,8 @@ def start() -> None:
     temp_frame_paths = get_temp_frame_paths(roop.globals.target_path)
     for frame_processor in get_frame_processors_modules(roop.globals.frame_processors):
         update_status('Progressing...', frame_processor.NAME)
-        frame_processor.process_video(roop.globals.source_path, temp_frame_paths)
+        frame_processor.process_video(
+            roop.globals.source_path, temp_frame_paths)
         frame_processor.post_process()
         release_resources()
     # handles fps
@@ -182,7 +199,8 @@ def start() -> None:
         if roop.globals.keep_fps:
             update_status('Restoring audio...')
         else:
-            update_status('Restoring audio might cause issues as fps are not kept...')
+            update_status(
+                'Restoring audio might cause issues as fps are not kept...')
         restore_audio(roop.globals.target_path, roop.globals.output_path)
     else:
         move_temp(roop.globals.target_path, roop.globals.output_path)
