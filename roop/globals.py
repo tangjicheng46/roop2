@@ -13,5 +13,4 @@ video_quality = None
 max_memory = None
 execution_providers: List[str] = []
 execution_threads = None
-headless = None
 log_level = 'error'
