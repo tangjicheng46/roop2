@@ -7,7 +7,7 @@ FACE_ANALYSER = insightface.app.FaceAnalysis(
     name='buffalo_l', providers=PROVIDERS_LIST)
 FACE_ANALYSER.prepare(ctx_id=0, det_size=(640, 640))
 
-root_path = ""
+root_path = "/Users/tangjicheng/roop2/"
 input_image = root_path + "image/song1.jpg"
 input_video = root_path + "video/1.mp4"
 output_video = root_path + "test1.mp4"
@@ -71,4 +71,4 @@ def main(image_file, video_file, output_file):
 
 if __name__ == "__main__":
     main(input_image,
-         output_video, output_video)
+         input_video, output_video)
