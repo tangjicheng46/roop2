@@ -7,10 +7,11 @@ FACE_ANALYSER = insightface.app.FaceAnalysis(
     name='buffalo_l', providers=PROVIDERS_LIST)
 FACE_ANALYSER.prepare(ctx_id=0, det_size=(640, 640))
 
-input_image = "/home/ec2-user/roop2/image/song1.jpg"
-input_video = "/home/ec2-user/roop2/video/2.mp4"
-output_video = "/home/ec2-user/roop2/test3.mp4"
-swap_face_model_path = "/home/ec2-user/roop2/models/inswapper_128.onnx"
+root_path = ""
+input_image = root_path + "image/song1.jpg"
+input_video = root_path + "video/1.mp4"
+output_video = root_path + "test1.mp4"
+swap_face_model_path = root_path + "models/inswapper_128.onnx"
 FACE_SWAPPER = insightface.model_zoo.get_model(
     swap_face_model_path, providers=PROVIDERS_LIST)
 
@@ -69,5 +70,5 @@ def main(image_file, video_file, output_file):
 
 
 if __name__ == "__main__":
-    main(input_video,
+    main(input_image,
          output_video, output_video)
