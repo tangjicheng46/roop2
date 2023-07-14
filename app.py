@@ -1,7 +1,7 @@
 import gradio as gr
 import roop2
 
-OUTPUT_VIDEO = "/app/output.mp4"
+from roop2_config import OUTPUT_VIDEO
 
 def process_video(input_image_file, input_video_file):
     roop2.main(input_image_file, input_video_file, OUTPUT_VIDEO)

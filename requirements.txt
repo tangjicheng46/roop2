@@ -3,6 +3,6 @@ numpy
 opencv-python
 pillow
 onnx
-onnxruntime
-av
+onnxruntime-gpu
+moviepy
 gradio

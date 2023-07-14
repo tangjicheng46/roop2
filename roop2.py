@@ -1,13 +1,12 @@
 import os
 import cv2
-import av
-import insightface
 import argparse
+import insightface
+from moviepy.editor import VideoFileClip
 
-PROVIDERS_LIST = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+from roop2_config import MODELS_ROOT,INSWAPPER_ONNX_FILE,TEMP_VIDEO_FILE
 
-MODELS_ROOT = "/app"
-INSWAPPER_ONNX_FILE = "/app/models/inswapper_128.onnx"
+PROVIDERS_LIST = ["CUDAExecutionProvider", "CPUExecutionProvider"]
 
 FACE_ANALYSER = insightface.app.FaceAnalysis(
     name='buffalo_l', providers=PROVIDERS_LIST, root=MODELS_ROOT)
@@ -67,13 +66,20 @@ def process_video(input_image_file, input_video_file, output_video_file):
     output_video.release()
 
 
-def copy_audio(source_video_path, target_video_path):
-    pass
+def copy_audio(source_video_file, target_video_file, output_video_file):
+    video1 = VideoFileClip(source_video_file)
+    video2 = VideoFileClip(target_video_file)
+
+    audio = video1.audio
+
+    video2 = video2.set_audio(audio)
+
+    video2.write_videofile(output_video_file)
 
 
 def main(input_image_file, input_video_file, output_video_file):
-    process_video(input_image_file, input_video_file, output_video_file)
-    copy_audio(input_video_file, output_video_file)
+    process_video(input_image_file, input_video_file, TEMP_VIDEO_FILE)
+    copy_audio(input_video_file, TEMP_VIDEO_FILE, output_video_file)
 
 
 if __name__ == "__main__":
