@@ -4,12 +4,12 @@ import argparse
 import insightface
 from moviepy.editor import VideoFileClip
 
-from roop2_config import MODELS_ROOT,INSWAPPER_ONNX_FILE,TEMP_VIDEO_FILE
+from roop2_config import INSWAPPER_ONNX_FILE, TEMP_VIDEO_FILE
 
 PROVIDERS_LIST = ["CUDAExecutionProvider", "CPUExecutionProvider"]
 
 FACE_ANALYSER = insightface.app.FaceAnalysis(
-    name='buffalo_l', providers=PROVIDERS_LIST, root=MODELS_ROOT)
+    name='buffalo_l', providers=PROVIDERS_LIST)
 FACE_ANALYSER.prepare(ctx_id=0, det_size=(640, 640))
 
 FACE_SWAPPER = insightface.model_zoo.get_model(INSWAPPER_ONNX_FILE, providers=PROVIDERS_LIST)
@@ -59,7 +59,7 @@ def process_video(input_image_file, input_video_file, output_video_file):
         output_video.write(output_frame)
 
         i_frame += 1
-        if i_frame % 4 == 0:
+        if i_frame % 10 == 0:
             print(f"{i_frame} / {total_frames}")
 
     video.release()
@@ -67,6 +67,9 @@ def process_video(input_image_file, input_video_file, output_video_file):
 
 
 def copy_audio(source_video_file, target_video_file, output_video_file):
+    print(f"[copy_audio] source video: {source_video_file}")
+    print(f"[copy_audio] target video: {target_video_file}")
+    print(f"[copy_audio] output video: {output_video_file}")
     video1 = VideoFileClip(source_video_file)
     video2 = VideoFileClip(target_video_file)
 
@@ -78,8 +81,9 @@ def copy_audio(source_video_file, target_video_file, output_video_file):
 
 
 def main(input_image_file, input_video_file, output_video_file):
-    process_video(input_image_file, input_video_file, TEMP_VIDEO_FILE)
-    copy_audio(input_video_file, TEMP_VIDEO_FILE, output_video_file)
+    process_video(input_image_file, input_video_file, output_video_file)
+    # process_video(input_image_file, input_video_file, TEMP_VIDEO_FILE)
+    # copy_audio(input_video_file, TEMP_VIDEO_FILE, output_video_file)
 
 
 if __name__ == "__main__":
