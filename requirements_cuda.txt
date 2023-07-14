@@ -6,7 +6,7 @@ torch
 torchvision
 gfpgan
 onnx
-onnxruntime
+onnxruntime-gpu
 tensorflow
 protobuf
 tqdm
