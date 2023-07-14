@@ -81,9 +81,8 @@ def copy_audio(source_video_file, target_video_file, output_video_file):
 
 
 def main(input_image_file, input_video_file, output_video_file):
-    process_video(input_image_file, input_video_file, output_video_file)
-    # process_video(input_image_file, input_video_file, TEMP_VIDEO_FILE)
-    # copy_audio(input_video_file, TEMP_VIDEO_FILE, output_video_file)
+    process_video(input_image_file, input_video_file, TEMP_VIDEO_FILE)
+    copy_audio(input_video_file, TEMP_VIDEO_FILE, output_video_file)
 
 
 if __name__ == "__main__":

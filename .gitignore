@@ -1,9 +1,11 @@
 image/
+input/
 output/
 video/
 .vscode/
 *.onnx
 *.mp4
+*.mp3
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
