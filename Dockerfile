@@ -1,13 +1,17 @@
-FROM nvcr.io/nvidia/tensorrt:23.06-py3
+FROM python:3.10
 
-RUN mkdir -p /app && mkdir -p /app/models
-WORKDIR /app
+RUN mkdir -p /app
+WORKDIR /app 
 
-ADD VERSION /app/
-ADD app.py /app/
-ADD roop2.py /app/
-ADD requirements_cuda.txt /app/
+ADD VERSION /app/VERSION
+ADD app.py /app/app.py
+ADD roop2.py /app/roop2.py
+ADD requirements.txt /app/requirements.txt
 
-RUN pip install -r /app/requirements_cuda.txt
+COPY ./models /app/models
 
-CMD [ "executable" ]
+RUN apt-get update && apt-get install -y libgl1-mesa-glx
+
+RUN pip install -r /app/requirements.txt
+
+CMD [ "gradio" , "app.py", "--port", "8000"]

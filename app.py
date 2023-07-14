@@ -1,16 +1,11 @@
 import gradio as gr
-import cv2
-from roop.core import run_with_param
+import roop2
 
-gradio_temp_path = "~/temp"
-gradio_face = "~/temp/face.jpg"
-gradio_input_video = "~/temp/input.mp4"
-gradio_output_video = "~/temp/output.mp4"
+OUTPUT_VIDEO = "/app/output.mp4"
 
-
-def process_video(face_image, input_video):
-    run_with_param(face_image, input_video, gradio_output_video)
-    return gradio_output_video
+def process_video(input_image_file, input_video_file):
+    roop2.main(input_image_file, input_video_file, OUTPUT_VIDEO)
+    return OUTPUT_VIDEO
 
 
 inputs = [
@@ -21,6 +16,6 @@ inputs = [
 output = gr.outputs.Video(type="mp4", label="Output video")
 
 app = gr.Interface(fn=process_video, inputs=inputs,
-                   outputs=output, title="Faceswap App")
+                   outputs=output, title="Faceswap App", server_timeout=6000)
 
 app.launch(share=True)

@@ -1,19 +1,19 @@
+import os
 import cv2
+import av
 import insightface
+import argparse
 
 PROVIDERS_LIST = ['CUDAExecutionProvider', 'CPUExecutionProvider']
 
+MODELS_ROOT = "/app"
+INSWAPPER_ONNX_FILE = "/app/models/inswapper_128.onnx"
+
 FACE_ANALYSER = insightface.app.FaceAnalysis(
-    name='buffalo_l', providers=PROVIDERS_LIST)
+    name='buffalo_l', providers=PROVIDERS_LIST, root=MODELS_ROOT)
 FACE_ANALYSER.prepare(ctx_id=0, det_size=(640, 640))
 
-root_path = "/Users/tangjicheng/roop2/"
-input_image = root_path + "image/song1.jpg"
-input_video = root_path + "video/1.mp4"
-output_video = root_path + "test1.mp4"
-swap_face_model_path = root_path + "models/inswapper_128.onnx"
-FACE_SWAPPER = insightface.model_zoo.get_model(
-    swap_face_model_path, providers=PROVIDERS_LIST)
+FACE_SWAPPER = insightface.model_zoo.get_model(INSWAPPER_ONNX_FILE, providers=PROVIDERS_LIST)
 
 
 def get_one_face(frame):
@@ -27,8 +27,13 @@ def swap_face(input_face, frame_face, frame):
     return FACE_SWAPPER.get(frame, frame_face, input_face, paste_back=True)
 
 
-def process_video(input_face, input_file, output_file):
-    video = cv2.VideoCapture(input_file)
+def process_video(input_image_file, input_video_file, output_video_file):
+    input_face = get_one_face(cv2.imread(input_image_file))
+    if input_face == None:
+        print("No face in image")
+        return
+
+    video = cv2.VideoCapture(input_video_file)
 
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -37,7 +42,8 @@ def process_video(input_face, input_file, output_file):
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     fps = video.get(cv2.CAP_PROP_FPS)
-    output = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
+    output_video = cv2.VideoWriter(
+        output_video_file, fourcc, fps, (width, height))
 
     i_frame = 0
     while video.isOpened():
@@ -51,24 +57,32 @@ def process_video(input_face, input_file, output_file):
         else:
             output_frame = swap_face(input_face, frame_face, frame)
 
-        output.write(output_frame)
+        output_video.write(output_frame)
 
         i_frame += 1
-        if i_frame % 100 == 0:
+        if i_frame % 4 == 0:
             print(f"{i_frame} / {total_frames}")
 
     video.release()
-    output.release()
+    output_video.release()
 
 
-def main(image_file, video_file, output_file):
-    input_face = get_one_face(cv2.imread(image_file))
-    if input_face == None:
-        print("No face in image")
-        return
-    process_video(input_face, video_file, output_file)
+def copy_audio(source_video_path, target_video_path):
+    pass
+
+
+def main(input_image_file, input_video_file, output_video_file):
+    process_video(input_image_file, input_video_file, output_video_file)
+    copy_audio(input_video_file, output_video_file)
 
 
 if __name__ == "__main__":
-    main(input_image,
-         input_video, output_video)
+    parser = argparse.ArgumentParser(description='Roop2')
+
+    parser.add_argument('--input-image', help='path to the input image file')
+    parser.add_argument('--input-video', help='path to the input video file')
+    parser.add_argument('--output-video', help='path to the output video file')
+
+    args = parser.parse_args()
+
+    main(args.input_image, args.input_video, args.output_video)

@@ -2,13 +2,7 @@ insightface
 numpy
 opencv-python
 pillow
-torch
-torchvision
-gfpgan
 onnx
 onnxruntime
-tensorflow
-protobuf
-tqdm
-psutil
 av
+gradio
